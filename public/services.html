@@ -1,1 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - SMM Panel</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><i class="fas fa-rocket"></i> SMM PANEL</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/services" class="active">Services</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/orders">Orders</a>
+                <a href="/balance">Add Funds</a>
+                <a href="#" id="logout-btn" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
 
+    <div class="container">
+        <div class="page-header">
+            <h1>Our Services</h1>
+            <p>Choose from our wide range of social media marketing services</p>
+        </div>
+
+        <!-- Search and Filter -->
+        <div class="services-filter">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="search-input" placeholder="Search services..." onkeyup="searchServices()">
+            </div>
+            
+            <div class="category-filter">
+                <select id="category-select" onchange="filterByCategory()">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Services Grid -->
+        <div id="services-container" class="services-grid">
+            <div class="loading">Loading services...</div>
+        </div>
+
+        <!-- Order Modal -->
+        <div id="order-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h2>Place New Order</h2>
+                <div id="service-details"></div>
+                
+                <form id="order-form" onsubmit="placeOrder(event)">
+                    <input type="hidden" id="service-id" name="service_id">
+                    
+                    <div class="form-group">
+                        <label for="link">Link/URL *</label>
+                        <input type="url" id="link" name="link" required 
+                               placeholder="https://instagram.com/p/... or https://t.me/...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="quantity">Quantity *</label>
+                        <input type="number" id="quantity" name="quantity" required 
+                               min="1" max="100000" step="1">
+                        <small id="quantity-range"></small>
+                    </div>
+                    
+                    <div class="form-group" id="comments-group" style="display: none;">
+                        <label for="comments">Comments (One per line)</label>
+                        <textarea id="comments" name="comments" rows="4" 
+                                  placeholder="good pic&#10;nice photo&#10;:)"></textarea>
+                    </div>
+                    
+                    <div class="order-summary">
+                        <p>Price: <span id="price-per-unit">0</span> per 1000</p>
+                        <p>Total: <span id="total-price">0.00</span> USD</p>
+                    </div>
+                    
+                    <div class="balance-info" id="balance-info"></div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">Place Order</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        let allServices = [];
+        let currentService = null;
+        let userBalance = 0;
+
+        // Check authentication
+        if (!checkAuth()) {
+            window.location.href = '/login';
+        }
+
+        // Load user balance
+        async function loadBalance() {
+            try {
+                const response = await fetch('/api/user/balance', {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                if (data.success) {
+                    userBalance = data.balance;
+                }
+            } catch (error) {
+                console.error('Error loading balance:', error);
+            }
+        }
+
+        // Load services
+        async function loadServices() {
+            try {
+                const response = await fetch('/api/services', {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    allServices = data.services;
+                    displayServices(allServices);
+                    populateCategories(data.categories);
+                }
+            } catch (error) {
+                console.error('Error loading services:', error);
+                document.getElementById('services-container').innerHTML = 
+                    '<p class="error">Failed to load services. Please try again.</p>';
+            }
+        }
+
+        // Display services
+        function displayServices(services) {
+            const container = document.getElementById('services-container');
+            
+            if (services.length === 0) {
+                container.innerHTML = '<p class="no-services">No services found</p>';
+                return;
+            }
+            
+            container.innerHTML = services.map(service => `
+                <div class="service-card" onclick="openOrderModal(${service.service_id})">
+                    <div class="service-badge">${service.category || 'General'}</div>
+                    <h4>${service.name}</h4>
+                    <div class="service-price">₹${parseFloat(service.rate).toFixed(2)}/1000</div>
+                    <div class="service-details">
+                        <span class="min-max">Min: ${service.min_order}</span>
+                        <span class="min-max">Max: ${service.max_order}</span>
+                    </div>
+                    ${service.refill ? '<span class="badge badge-success">Refill Available</span>' : ''}
+                    ${service.cancel ? '<span class="badge badge-warning">Cancel Available</span>' : ''}
+                    <p class="service-description">${service.description || 'No description available'}</p>
+                    <button class="btn btn-primary btn-small">Order Now</button>
+                </div>
+            `).join('');
+        }
+
+        // Populate categories
+        function populateCategories(categories) {
+            const select = document.getElementById('category-select');
+            if (categories && categories.length > 0) {
+                categories.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.category;
+                    option.textContent = `${cat.category} (${cat.count})`;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        // Search services
+        function searchServices() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filtered = allServices.filter(service => 
+                service.name.toLowerCase().includes(searchTerm) ||
+                (service.description && service.description.toLowerCase().includes(searchTerm))
+            );
+            displayServices(filtered);
+        }
+
+        // Filter by category
+        function filterByCategory() {
+            const category = document.getElementById('category-select').value;
+            if (!category) {
+                displayServices(allServices);
+                return;
+            }
+            const filtered = allServices.filter(service => service.category === category);
+            displayServices(filtered);
+        }
+
+        // Open order modal
+        async function openOrderModal(serviceId) {
+            try {
+                const response = await fetch(`/api/services/${serviceId}`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentService = data.service;
+                    
+                    document.getElementById('service-id').value = currentService.service_id;
+                    document.getElementById('service-details').innerHTML = `
+                        <h3>${currentService.name}</h3>
+                        <p>Rate: ₹${parseFloat(currentService.rate).toFixed(2)} per 1000</p>
+                        <p>Min Order: ${currentService.min_order} | Max Order: ${currentService.max_order}</p>
+                    `;
+                    
+                    document.getElementById('quantity').min = currentService.min_order;
+                    document.getElementById('quantity').max = currentService.max_order;
+                    document.getElementById('quantity-range').textContent = 
+                        `Min: ${currentService.min_order} | Max: ${currentService.max_order}`;
+                    
+                    document.getElementById('price-per-unit').textContent = 
+                        `₹${parseFloat(currentService.rate).toFixed(2)}`;
+                    
+                    if (currentService.type === 'custom_comments') {
+                        document.getElementById('comments-group').style.display = 'block';
+                    } else {
+                        document.getElementById('comments-group').style.display = 'none';
+                    }
+                    
+                    updateTotalPrice();
+                    
+                    document.getElementById('order-modal').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading service details:', error);
+                alert('Failed to load service details');
+            }
+        }
+
+        // Update total price
+        function updateTotalPrice() {
+            const quantity = parseInt(document.getElementById('quantity').value) || 0;
+            if (currentService && quantity > 0) {
+                const price = (parseFloat(currentService.rate) * quantity) / 1000;
+                document.getElementById('total-price').textContent = price.toFixed(2);
+                
+                const balanceInfo = document.getElementById('balance-info');
+                if (userBalance < price) {
+                    balanceInfo.innerHTML = '<p class="error">Insufficient balance! <a href="/balance">Add funds</a></p>';
+                } else {
+                    balanceInfo.innerHTML = '';
+                }
+            }
+        }
+
+        // Place order
+        async function placeOrder(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const data = {
+                service_id: formData.get('service_id'),
+                link: formData.get('link'),
+                quantity: parseInt(formData.get('quantity'))
+            };
+            
+            if (formData.get('comments')) {
+                data.comments = formData.get('comments');
+            }
+            
+            try {
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Order placed successfully! Order ID: ' + result.order.id);
+                    closeModal();
+                    loadBalance(); // Refresh balance
+                } else {
+                    alert(result.error || 'Failed to place order');
+                }
+            } catch (error) {
+                console.error('Order error:', error);
+                alert('Failed to place order. Please try again.');
+            }
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('order-modal').style.display = 'none';
+            document.getElementById('order-form').reset();
+        }
+
+        // Event listeners
+        document.getElementById('quantity').addEventListener('input', updateTotalPrice);
+
+        // Initialize
+        loadBalance();
+        loadServices();
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('order-modal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+
+    <style>
+        /* Additional styles for services page */
+        .page-header {
+            text-align: center;
+            margin: 40px 0 30px;
+        }
+        
+        .page-header h1 {
+            font-size: 36px;
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+        
+        .page-header p {
+            color: var(--gray);
+            font-size: 18px;
+        }
+        
+        .services-filter {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .search-box {
+            flex: 2;
+            position: relative;
+        }
+        
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px 12px 12px 45px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        
+        .category-filter {
+            flex: 1;
+        }
+        
+        .category-filter select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 16px;
+            background: white;
+        }
+        
+        .service-card {
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .service-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .service-price {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            margin: 15px 0 10px;
+        }
+        
+        .service-details {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .service-description {
+            color: var(--gray);
+            font-size: 14px;
+            margin: 15px 0;
+            line-height: 1.4;
+        }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+        
+        .close {
+            position: absolute;
+            right: 20px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--gray);
+        }
+        
+        .close:hover {
+            color: var(--dark);
+        }
+        
+        #service-details {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        
+        #service-details h3 {
+            margin-bottom: 10px;
+        }
+        
+        .order-summary {
+            background: #e0f2fe;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 600;
+        }
+        
+        .order-summary p {
+            margin: 5px 0;
+        }
+        
+        .balance-info {
+            margin: 15px 0;
+        }
+        
+        .error {
+            color: var(--danger);
+            font-weight: 500;
+        }
+        
+        .error a {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+        
+        .no-services {
+            text-align: center;
+            padding: 60px;
+            color: var(--gray);
+            font-size: 18px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .services-filter {
+                flex-direction: column;
+            }
+            
+            .modal-content {
+                margin: 10% auto;
+                padding: 20px;
+            }
+        }
+    </style>
+</body>
+</html>
