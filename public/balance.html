@@ -1,1 +1,215 @@
+<!-- public/balance.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Balance - SMM Panel</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><i class="fas fa-rocket"></i> SMM PANEL</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/services">Services</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/orders">Orders</a>
+                <a href="/balance" class="active">Add Funds</a>
+                <a href="#" id="logout-btn" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
 
+    <div class="container">
+        <h1>Add Funds to Your Balance</h1>
+        
+        <div class="balance-grid">
+            <div class="current-balance-card">
+                <h3>Current Balance</h3>
+                <div class="balance-amount-large" id="current-balance">$0.00</div>
+                <p>USDT (BEP20)</p>
+            </div>
+            
+            <div class="add-funds-card">
+                <h3>Add Funds via Binance</h3>
+                
+                <form id="payment-form" onsubmit="createPayment(event)">
+                    <div class="form-group">
+                        <label for="amount">Amount (USD)</label>
+                        <input type="number" id="amount" name="amount" required 
+                               min="1" max="10000" step="1" value="10">
+                        <small>Minimum: $1 | Maximum: $10000</small>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">Generate QR Code</button>
+                </form>
+                
+                <div id="payment-details" style="display: none;">
+                    <hr>
+                    <h4>Scan QR Code to Pay</h4>
+                    <div class="qr-container">
+                        <img id="qr-code" src="" alt="QR Code">
+                    </div>
+                    
+                    <div class="address-container">
+                        <p><strong>Deposit Address:</strong></p>
+                        <div class="address-box">
+                            <code id="deposit-address"></code>
+                            <button onclick="copyAddress()" class="btn btn-small">Copy</button>
+                        </div>
+                    </div>
+                    
+                    <div class="payment-info">
+                        <p><strong>Amount:</strong> <span id="payment-amount"></span> USDT</p>
+                        <p><strong>Status:</strong> <span id="payment-status">Pending</span></p>
+                        <p><strong>Expires in:</strong> <span id="expires-in">30 minutes</span></p>
+                    </div>
+                    
+                    <button onclick="checkPayment()" class="btn btn-outline">Check Payment Status</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="transaction-history">
+            <h3>Recent Transactions</h3>
+            <table class="transactions-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Order ID</th>
+                        <th>Amount</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="transactions-body">
+                    <tr><td colspan="5" class="text-center">Loading transactions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        let currentPaymentId = null;
+
+        function loadBalance() {
+            fetch('/api/user/balance', { headers: getAuthHeaders() })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('current-balance').textContent = 
+                            `$${parseFloat(data.balance).toFixed(2)}`;
+                    }
+                });
+        }
+
+        function loadTransactions() {
+            fetch('/api/user/transactions', { headers: getAuthHeaders() })
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('transactions-body');
+                    if (data.success && data.transactions.length > 0) {
+                        tbody.innerHTML = data.transactions.map(tx => `
+                            <tr>
+                                <td>${new Date(tx.created_at).toLocaleString()}</td>
+                                <td>${tx.order_id || 'N/A'}</td>
+                                <td>$${parseFloat(tx.amount).toFixed(2)}</td>
+                                <td>${tx.type}</td>
+                                <td><span class="status-${tx.status}">${tx.status}</span></td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No transactions yet</td></tr>';
+                    }
+                });
+        }
+
+        async function createPayment(event) {
+            event.preventDefault();
+            
+            const amount = document.getElementById('amount').value;
+            
+            try {
+                const response = await fetch('/api/payments/create', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ amount: parseInt(amount) })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentPaymentId = data.payment_id;
+                    
+                    document.getElementById('payment-details').style.display = 'block';
+                    document.getElementById('qr-code').src = data.qr_code;
+                    document.getElementById('deposit-address').textContent = data.address;
+                    document.getElementById('payment-amount').textContent = data.amount;
+                    
+                    // Start checking payment status
+                    startPaymentCheck();
+                } else {
+                    alert(data.error || 'Failed to create payment');
+                }
+            } catch (error) {
+                console.error('Payment creation error:', error);
+                alert('Failed to create payment');
+            }
+        }
+
+        function startPaymentCheck() {
+            checkPayment();
+            window.paymentInterval = setInterval(checkPayment, 5000);
+        }
+
+        async function checkPayment() {
+            if (!currentPaymentId) return;
+            
+            try {
+                const response = await fetch(`/api/payments/verify/${currentPaymentId}`, {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+                
+                const data = await response.json();
+                
+                if (data.verified) {
+                    document.getElementById('payment-status').textContent = 'Completed';
+                    document.getElementById('payment-status').className = 'status-completed';
+                    clearInterval(window.paymentInterval);
+                    
+                    // Refresh balance
+                    loadBalance();
+                    loadTransactions();
+                    
+                    alert('Payment received! Balance updated.');
+                } else if (data.expired) {
+                    document.getElementById('payment-status').textContent = 'Expired';
+                    document.getElementById('payment-status').className = 'status-cancelled';
+                    clearInterval(window.paymentInterval);
+                }
+            } catch (error) {
+                console.error('Payment check error:', error);
+            }
+        }
+
+        function copyAddress() {
+            const address = document.getElementById('deposit-address').textContent;
+            navigator.clipboard.writeText(address);
+            alert('Address copied to clipboard!');
+        }
+
+        // Initialize
+        checkAuth();
+        loadBalance();
+        loadTransactions();
+    </script>
+</body>
+</html>
