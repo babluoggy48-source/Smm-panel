@@ -1,1 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - SMM Panel</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><i class="fas fa-rocket"></i> SMM PANEL</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/services">Services</a>
+                <a href="/dashboard" class="active">Dashboard</a>
+                <a href="/orders">Orders</a>
+                <a href="/balance">Add Funds</a>
+                <a href="#" id="logout-btn" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
 
+    <div class="container">
+        <div class="dashboard-header">
+            <h1>Welcome back, <span id="username">User</span>!</h1>
+            <div class="balance-card">
+                <i class="fas fa-wallet"></i>
+                <div>
+                    <span class="balance-label">Your Balance</span>
+                    <span class="balance-amount" id="user-balance">$0.00</span>
+                </div>
+                <a href="/balance" class="btn btn-primary btn-small">Add Funds</a>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <i class="fas fa-shopping-cart"></i>
+                <div>
+                    <span class="stat-value" id="total-orders">0</span>
+                    <span class="stat-label">Total Orders</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-check-circle"></i>
+                <div>
+                    <span class="stat-value" id="completed-orders">0</span>
+                    <span class="stat-label">Completed</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-spinner"></i>
+                <div>
+                    <span class="stat-value" id="pending-orders">0</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <i class="fas fa-dollar-sign"></i>
+                <div>
+                    <span class="stat-value" id="total-spent">$0.00</span>
+                    <span class="stat-label">Total Spent</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="recent-orders">
+            <h2>Recent Orders</h2>
+            <div class="table-responsive">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Service</th>
+                            <th>Link</th>
+                            <th>Quantity</th>
+                            <th>Charge</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-orders-body">
+                        <tr><td colspan="7" class="text-center">Loading orders...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <a href="/orders" class="btn btn-link">View All Orders <i class="fas fa-arrow-right"></i></a>
+        </div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        // Check authentication
+        checkAuth();
+
+        // Load user data
+        fetch('/api/auth/me', {
+            headers: getAuthHeaders()
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('username').textContent = data.user.username;
+                document.getElementById('user-balance').textContent = `$${parseFloat(data.user.balance).toFixed(2)}`;
+            }
+        });
+
+        // Load user stats
+        fetch('/api/user/stats', {
+            headers: getAuthHeaders()
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('total-orders').textContent = data.total_orders;
+                document.getElementById('completed-orders').textContent = data.completed_orders;
+                document.getElementById('pending-orders').textContent = data.pending_orders;
+                document.getElementById('total-spent').textContent = `$${parseFloat(data.total_spent).toFixed(2)}`;
+            }
+        });
+
+        // Load recent orders
+        fetch('/api/orders?limit=5', {
+            headers: getAuthHeaders()
+        })
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('recent-orders-body');
+            if (data.orders && data.orders.length > 0) {
+                tbody.innerHTML = data.orders.map(order => `
+                    <tr>
+                        <td>#${order.id}</td>
+                        <td>${order.service_name || 'N/A'}</td>
+                        <td><a href="${order.link}" target="_blank">Link</a></td>
+                        <td>${order.quantity}</td>
+                        <td>$${parseFloat(order.charge).toFixed(2)}</td>
+                        <td><span class="status-${order.status}">${order.status}</span></td>
+                        <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center">No orders yet</td></tr>';
+            }
+        });
+    </script>
+</body>
+</html>
