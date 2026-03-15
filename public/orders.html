@@ -1,1 +1,141 @@
+<!-- public/orders.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Orders - SMM Panel</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><i class="fas fa-rocket"></i> SMM PANEL</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/">Home</a>
+                <a href="/services">Services</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/orders" class="active">Orders</a>
+                <a href="/balance">Add Funds</a>
+                <a href="#" id="logout-btn" class="btn btn-outline">Logout</a>
+            </div>
+        </div>
+    </nav>
 
+    <div class="container">
+        <h1>My Orders</h1>
+        
+        <div class="orders-filter">
+            <select id="status-filter" onchange="filterOrders()">
+                <option value="">All Orders</option>
+                <option value="pending">Pending</option>
+                <option value="processing">Processing</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+
+        <div class="table-responsive">
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Service</th>
+                        <th>Link</th>
+                        <th>Quantity</th>
+                        <th>Charge</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-body">
+                    <tr><td colspan="8" class="text-center">Loading orders...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <script src="/script.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentStatus = '';
+
+        function loadOrders(page = 1) {
+            const status = document.getElementById('status-filter').value;
+            let url = `/api/orders?page=${page}&limit=20`;
+            if (status) url += `&status=${status}`;
+            
+            fetch(url, { headers: getAuthHeaders() })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        displayOrders(data.orders);
+                        setupPagination(data.pagination);
+                    }
+                });
+        }
+
+        function displayOrders(orders) {
+            const tbody = document.getElementById('orders-body');
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center">No orders found</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = orders.map(order => `
+                <tr>
+                    <td>#${order.id}</td>
+                    <td>${order.service_name || 'N/A'}</td>
+                    <td><a href="${order.link}" target="_blank">View Link</a></td>
+                    <td>${order.quantity}</td>
+                    <td>$${parseFloat(order.charge).toFixed(2)}</td>
+                    <td><span class="status-${order.status}">${order.status}</span></td>
+                    <td>${new Date(order.created_at).toLocaleDateString()}</td>
+                    <td>
+                        <button onclick="viewOrder(${order.id})" class="btn btn-small">View</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterOrders() {
+            currentPage = 1;
+            loadOrders(1);
+        }
+
+        function setupPagination(pagination) {
+            const container = document.getElementById('pagination');
+            if (pagination.pages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            let html = '<div class="pagination-controls">';
+            for (let i = 1; i <= pagination.pages; i++) {
+                if (i === pagination.page) {
+                    html += `<span class="current-page">${i}</span>`;
+                } else {
+                    html += `<a href="#" onclick="loadOrders(${i}); return false;">${i}</a>`;
+                }
+            }
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function viewOrder(orderId) {
+            window.location.href = `/order-details.html?id=${orderId}`;
+        }
+
+        // Initial load
+        checkAuth();
+        loadOrders();
+    </script>
+</body>
+</html>
