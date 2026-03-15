@@ -1,1 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMM Panel - #1 Social Media Marketing Platform</title>
+    <link rel="stylesheet" href="/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container">
+            <div class="nav-brand">
+                <h1><i class="fas fa-rocket"></i> SMM PANEL</h1>
+            </div>
+            <div class="nav-menu">
+                <a href="/" class="active">Home</a>
+                <a href="/services">Services</a>
+                <a href="/dashboard">Dashboard</a>
+                <a href="/balance">Add Funds</a>
+                <a href="/login" class="btn btn-outline">Login</a>
+                <a href="/register" class="btn btn-primary">Sign Up</a>
+            </div>
+        </div>
+    </nav>
 
+    <header class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1>#1 Trusted SMM Panel</h1>
+                <p>Fast, Reliable & Affordable Social Media Marketing Services</p>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <span class="stat-value">10K+</span>
+                        <span class="stat-label">Happy Clients</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">1M+</span>
+                        <span class="stat-label">Orders Completed</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value">24/7</span>
+                        <span class="stat-label">Support</span>
+                    </div>
+                </div>
+                <div class="hero-buttons">
+                    <a href="/register" class="btn btn-primary btn-large">Get Started <i class="fas fa-arrow-right"></i></a>
+                    <a href="/services" class="btn btn-outline btn-large">View Services</a>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Why Choose Us?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Instant Delivery</h3>
+                    <p>Orders start within seconds of placement</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>100% Secure</h3>
+                    <p>No password required, safe & private</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-headset"></i>
+                    <h3>24/7 Support</h3>
+                    <p>Always here to help via WhatsApp</p>
+                </div>
+                <div class="feature-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Real Engagement</h3>
+                    <p>High-quality services from real users</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="services-preview">
+        <div class="container">
+            <h2 class="section-title">Popular Services</h2>
+            <div class="services-grid" id="popular-services">
+                <!-- Services will be loaded via JavaScript -->
+                <div class="loading">Loading services...</div>
+            </div>
+            <div class="text-center">
+                <a href="/services" class="btn btn-primary">View All Services <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <i class="fas fa-users"></i>
+                    <div class="stat-number" id="total-users">10,234</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-shopping-cart"></i>
+                    <div class="stat-number" id="total-orders">387,438</div>
+                    <div class="stat-label">Orders Completed</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-dollar-sign"></i>
+                    <div class="stat-number" id="total-spent">920.4K</div>
+                    <div class="stat-label">Total Spent</div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <div class="stat-number" id="avg-time">5 min</div>
+                    <div class="stat-label">Avg Delivery</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <h2>Ready to Boost Your Social Media?</h2>
+            <p>Join thousands of satisfied customers today</p>
+            <a href="/register" class="btn btn-primary btn-large">Create Free Account</a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <h4>SMM Panel</h4>
+                    <p>#1 Trusted Social Media Marketing Platform</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Quick Links</h4>
+                    <a href="/services">Services</a>
+                    <a href="/dashboard">Dashboard</a>
+                    <a href="/balance">Add Funds</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <a href="#">FAQ</a>
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Privacy Policy</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Contact</h4>
+                    <p><i class="fab fa-whatsapp"></i> +1 234 567 890</p>
+                    <p><i class="far fa-envelope"></i> support@smm.com</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 SMM Panel. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/script.js"></script>
+    <script>
+        // Load popular services
+        fetch('/api/services?limit=6')
+            .then(res => res.json())
+            .then(data => {
+                const container = document.getElementById('popular-services');
+                if (data.services && data.services.length > 0) {
+                    container.innerHTML = data.services.slice(0, 6).map(service => `
+                        <div class="service-card">
+                            <h4>${service.name}</h4>
+                            <p class="price">₹${parseFloat(service.rate).toFixed(2)}/1000</p>
+                            <p class="min-max">Min: ${service.min_order} | Max: ${service.max_order}</p>
+                            <a href="/services?category=${service.category}" class="btn btn-small">View</a>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="no-services">Services loading...</p>';
+                }
+            })
+            .catch(err => {
+                console.error('Error loading services:', err);
+            });
+    </script>
+</body>
+      </html>
